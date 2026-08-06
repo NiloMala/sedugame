@@ -1,6 +1,8 @@
 # Contrato de API — Expedição do Saber
 
 > Fonte da verdade para integração entre o backend Laravel (eu) e o frontend Next.js (GPT, ver [04-prompt-frontend-gpt.md](./04-prompt-frontend-gpt.md)). Qualquer mudança aqui precisa ser replicada nos dois lados. Cobre o escopo do MVP (seção 50 do [brief](./00-spec-original.md)); endpoints de Fase 2/3 (modo ao vivo, criador de campanhas, IA) ficam esboçados no fim, sem compromisso de estabilidade ainda.
+>
+> **Revisão 2026-08-06**: corrigido `POST /api/login` de `{ email, password }` para `{ login, password }` (login aceita e-mail OU RA — essa era uma inconsistência minha, não do time de frontend) e adicionados endpoints que faltavam (`/api/activities`, `/api/admin/settings`, reset de senha de aluno, payloads de `ordering`/`matching`/`fill_blank`/`multiple_choice`). Ver [05-frontend-round2.md](./05-frontend-round2.md) para o que precisa ser ajustado no frontend por causa disso.
 
 ## Convenções gerais
 
@@ -56,11 +58,23 @@ Como `app.SEUDOMINIO` e `api.SEUDOMINIO` compartilham o domínio raiz, usamos au
 Endpoints:
 ```
 GET  /sanctum/csrf-cookie
-POST /api/login              { email, password }                 -> 204, seta cookie
+POST /api/login              { login, password }                  -> 204, seta cookie
 POST /api/logout                                                   -> 204
-POST /api/forgot-password    { email }                             -> 204
+POST /api/forgot-password    { email }                             -> 204   (só staff — ver nota abaixo)
 POST /api/reset-password     { token, email, password, password_confirmation } -> 204
 GET  /api/me                                                       -> usuário autenticado (ver shape abaixo)
+```
+
+**Atenção — `login` não é sempre um e-mail.** O campo `login` aceita:
+- **e-mail** para staff (professor, coordenador, diretor, admin);
+- **RA** (`registration_number`, só dígitos) para aluno — login simplificado (seção 37 do brief).
+
+O backend decide qual é qual: se o valor bater no formato de e-mail, busca em `users.email`; senão, busca em `students.registration_number`. **O campo do formulário de login não pode ser `<input type="email">`** (isso bloqueia o navegador de aceitar um RA puramente numérico) — use `type="text"` com um placeholder tipo "E-mail ou RA".
+
+`POST /api/forgot-password` e o fluxo de recuperação por e-mail só existem pra staff. Aluno não recupera senha sozinho: se esquecer, o admin da escola reseta pelo endpoint abaixo, que devolve a senha padrão da rede (o aluno troca depois de logar):
+```
+POST /api/admin/students/{id}/reset-password   (role: school_admin | department_admin)
+  -> 200 { "data": { "message": "Senha do aluno resetada para o padrão da rede." } }
 ```
 
 `GET /api/me` — resposta:
@@ -159,9 +173,20 @@ GET /api/attempts/{id}/next-question
 ```
 ```
 POST /api/attempts/{id}/answers
-  body (objetiva):      { "question_id": 12, "selected_option_id": 45, "time_spent_seconds": 22, "hints_used": 1 }
-  body (map_location):  { "question_id": 13, "latitude": -23.6201, "longitude": -45.4109, "time_spent_seconds": 40, "hints_used": 0 }
-  body (resposta curta): { "question_id": 14, "answer_text": "Mata Atlântica", "time_spent_seconds": 15, "hints_used": 0 }
+  body (single_choice / true_false):
+    { "question_id": 12, "selected_option_id": 45, "time_spent_seconds": 22, "hints_used": 1 }
+  body (multiple_choice — mais de uma opção correta):
+    { "question_id": 12, "selected_option_ids": [45, 47], "time_spent_seconds": 22, "hints_used": 1 }
+  body (map_location):
+    { "question_id": 13, "latitude": -23.6201, "longitude": -45.4109, "time_spent_seconds": 40, "hints_used": 0 }
+  body (short_answer):
+    { "question_id": 14, "answer_text": "Mata Atlântica", "time_spent_seconds": 15, "hints_used": 0 }
+  body (fill_blank — uma resposta por lacuna, na ordem das lacunas no statement):
+    { "question_id": 15, "answer_text": ["1500", "Cabral"], "time_spent_seconds": 18, "hints_used": 0 }
+  body (ordering — ids das question_options na ordem escolhida pelo aluno):
+    { "question_id": 16, "ordered_option_ids": [3, 1, 2], "time_spent_seconds": 25, "hints_used": 0 }
+  body (matching — pares { option_id do lado A: option_id do lado B correspondente }):
+    { "question_id": 17, "matches": [{ "left_option_id": 5, "right_option_id": 9 }], "time_spent_seconds": 30, "hints_used": 0 }
 
   -> 200 {
     "data": {
@@ -189,10 +214,11 @@ POST /api/attempts/{id}/hints/{hintId}   -> revela conteúdo da pista e já apli
   -> 200 { "data": { "content": "A região fica na faixa litorânea..." } }
 ```
 
-### Passaporte e conquistas
+### Passaporte, conquistas e atividades
 ```
 GET /api/passport            -> perfil gamificado completo do aluno logado (nível, XP, campanhas concluídas, locais visitados, medalhas, desempenho por disciplina)
 GET /api/achievements         -> todas as conquistas + quais o aluno já desbloqueou
+GET /api/activities            -> atividades atribuídas às turmas do aluno logado (id, campaign, prazo, status, melhor tentativa)
 ```
 
 ---
@@ -227,6 +253,9 @@ Todos os recursos abaixo seguem o **mesmo padrão REST**: `GET` (lista paginada 
 /api/admin/media
 /api/admin/achievements
 /api/admin/levels
+GET  /api/admin/settings         -> configurações da rede: nome da plataforma, cores do tema, regras de pontuação/faixas de distância, integrações
+PUT  /api/admin/settings
+POST /api/admin/students/{id}/reset-password   (role: school_admin | department_admin — ver seção Autenticação)
 ```
 
 Exemplo de shape de erro de permissão (professor tentando acessar rota `/admin/*`):
