@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Admin\Concerns\ScopesToSchool;
+use App\Http\Controllers\Concerns\FormatsPagination;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\Student;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class UserController extends Controller
 {
-    use ScopesToSchool;
+    use ScopesToSchool, FormatsPagination;
 
     /**
      * school_admin não pode criar/promover ninguém pra esses papéis — só a Secretaria.
@@ -31,7 +32,7 @@ class UserController extends Controller
 
         $this->scopeQueryToSchool($request, $query);
 
-        return ['data' => $query->paginate(20)];
+        return $this->paginated($query->paginate(20));
     }
 
     public function show(Request $request, User $user)

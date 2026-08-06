@@ -280,15 +280,32 @@ Todos os recursos abaixo seguem o **mesmo padrão REST**: `GET` (lista paginada 
 /api/admin/skills
 /api/admin/campaigns          + POST /api/admin/campaigns/{id}/publish
 /api/admin/missions
-/api/admin/questions           + POST /api/admin/questions/{id}/review   { status: approved|rejected, notes }
+/api/admin/missions/{id}/stages         (nested — etapa não existe fora do contexto de uma missão; body aceita media_ids[] pra anexar mídia à etapa)
+/api/admin/questions           + POST /api/admin/questions/{id}/review   { status: school|network|official|archived, notes }
+                                  (options[], hints[], location{} podem vir aninhados no mesmo body de create/update — ver shape abaixo)
 /api/admin/locations
 /api/admin/media
-/api/admin/achievements
-/api/admin/levels
-GET  /api/admin/settings         -> configurações da rede: nome da plataforma, cores do tema, regras de pontuação/faixas de distância, integrações
+GET  /api/admin/settings         -> configurações da rede: nome da plataforma, cores do tema, regras de pontuação/faixas de distância
 PUT  /api/admin/settings
 POST /api/admin/students/{id}/reset-password   (role: school_admin | department_admin — ver seção Autenticação)
 ```
+
+> `achievements` e `levels` ainda não têm CRUD admin implementado — por ora são só seed (`database/seeders/LevelSeeder.php`, `CaraguatatubaCampaignSeeder.php`). Endpoints ficam pra quando a Secretaria precisar configurar isso pelo painel em vez de direto no banco.
+
+Shape de `POST/PUT /api/admin/questions` (options/hints/location aninhados):
+```json
+{
+  "subject_id": 3, "skill_id": 8, "grade_id": 1, "type": "single_choice",
+  "statement": "...", "explanation": "...", "difficulty": "easy",
+  "options": [
+    { "text": "Litoral Norte", "is_correct": true, "order": 0 },
+    { "text": "Litoral Sul", "is_correct": false, "order": 1 }
+  ],
+  "hints": [ { "type": "text", "content": "...", "score_penalty": 150, "order": 0 } ],
+  "location": { "latitude": -23.62, "longitude": -45.41, "accepted_radius_meters": 3000 }
+}
+```
+Para `type: "ordering"`, `options[].order` é a posição correta. Para `type: "matching"`, cada option leva `side: "left"|"right"` e o `order` compartilhado entre um item de cada lado define o par correto. Reenviar `options`/`hints`/`location` num `PUT` **substitui** o conjunto anterior inteiro (não faz merge parcial).
 
 Exemplo de shape de erro de permissão (professor tentando acessar rota `/admin/*`):
 ```json

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Admin\Concerns\ScopesToSchool;
+use App\Http\Controllers\Concerns\FormatsPagination;
 use App\Http\Controllers\Controller;
 use App\Models\Skill;
 use Illuminate\Http\Request;
@@ -10,7 +11,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class SkillController extends Controller
 {
-    use ScopesToSchool;
+    use ScopesToSchool, FormatsPagination;
 
     public function index(Request $request)
     {
@@ -18,7 +19,7 @@ class SkillController extends Controller
             ->when($request->filled('subject_id'), fn ($q) => $q->where('subject_id', $request->integer('subject_id')))
             ->when($request->filled('grade_id'), fn ($q) => $q->where('grade_id', $request->integer('grade_id')));
 
-        return ['data' => $query->orderBy('title')->paginate(20)];
+        return $this->paginated($query->orderBy('title')->paginate(20));
     }
 
     public function show(Skill $skill)

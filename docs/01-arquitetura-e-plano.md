@@ -140,15 +140,14 @@ pm2 save && pm2 startup
 
 ### Fase 1 — MVP (baseado na seção 50 do brief)
 
-| Sprint | Entregas |
-|---|---|
-| 1 — Fundação | Setup Laravel + Next.js, ambientes dev/hml/prod, Sanctum, roles/permissions (aluno, professor, admin), CRUD de escolas/turmas/disciplinas/habilidades |
-| 2 — Núcleo pedagógico | Modelagem campanha → missão → etapa → questão; CRUD admin de campanhas/missões/questões (objetiva + localização no mapa); seeders das 3 campanhas |
-| 3 — Gameplay | Fluxo de tentativa (`attempts`/`attempt_answers`); pontuação (base + distância Haversine + pistas + tempo); XP, níveis, conquistas, passaporte |
-| 4 — Painéis e relatórios | Dashboard aluno/professor/admin; atividades por turma; exportação PDF/Excel/CSV |
-| 5 — Polimento MVP | Acessibilidade, responsividade, PWA básico, testes das regras críticas, deploy produção |
+| Sprint | Entregas | Status |
+|---|---|---|
+| 1 — Fundação | Setup Laravel + Next.js, ambientes dev/hml/prod, Sanctum, roles/permissions (aluno, professor, admin), CRUD de escolas/turmas/disciplinas/habilidades | ✅ Concluído (2026-08-06) |
+| 2 — Núcleo pedagógico + Gameplay | Modelagem campanha → missão → etapa → questão; CRUD admin (com options/hints/location aninhados); fluxo de tentativa completo (8 tipos de questão); pontuação (Haversine + pistas + tempo + sequência); XP/níveis/conquistas; passaporte; seed de demonstração (campanha "Conhecendo Caraguatatuba", 3 missões, 8 questões) | ✅ Concluído (2026-08-06) — 20 testes de feature passando |
+| 3 — Fase 2 do backend | Ainda faltam: `/api/teacher/*` (turmas, atividades, relatórios), `/api/reports/*` (escola/rede), export PDF/Excel/CSV, CRUD admin de `achievements`/`levels` | Pendente |
+| 4 — Polimento MVP | Testes E2E, revisão de conteúdo real (as ~120 questões — trabalho pedagógico, não só código), deploy produção no CyberPanel | Pendente |
 
-Escopo do MVP, público e volume de conteúdo seguem exatamente a seção 50 do brief (3 campanhas, 6º/7º anos, ~120 questões) — não replanejado aqui.
+Escopo do MVP, público e volume de conteúdo seguem exatamente a seção 50 do brief (3 campanhas, 6º/7º anos, ~120 questões) — o seed atual (~8 questões) é só prova de que o pipeline funciona ponta a ponta, não o conteúdo final.
 
 ### Fase 2 e Fase 3
 Seguem as seções 52 e 53 do brief sem alteração. Revisamos o escopo detalhado quando o MVP estiver validado com uso real — não vale a pena planejar em detalhe agora algo que pode mudar com o feedback de professores/alunos.

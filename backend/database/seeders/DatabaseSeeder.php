@@ -43,5 +43,9 @@ class DatabaseSeeder extends Seeder
                 ]
             );
         }
+
+        // Conteúdo de demonstração (não é o volume final de produção — ver
+        // comentário no topo do próprio seeder).
+        $this->call(CaraguatatubaCampaignSeeder::class);
     }
 }

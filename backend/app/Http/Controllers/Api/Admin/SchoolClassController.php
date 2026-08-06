@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Admin\Concerns\ScopesToSchool;
+use App\Http\Controllers\Concerns\FormatsPagination;
 use App\Http\Controllers\Controller;
 use App\Models\SchoolClass;
 use Illuminate\Http\Request;
 
 class SchoolClassController extends Controller
 {
-    use ScopesToSchool;
+    use ScopesToSchool, FormatsPagination;
 
     public function index(Request $request)
     {
@@ -20,7 +21,7 @@ class SchoolClassController extends Controller
             $query->where('school_id', $request->integer('school_id'));
         }
 
-        return ['data' => $query->paginate(20)];
+        return $this->paginated($query->paginate(20));
     }
 
     public function show(Request $request, SchoolClass $class)

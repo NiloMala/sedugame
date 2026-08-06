@@ -14,7 +14,10 @@ class StudentActivityController extends Controller
      */
     public function index(Request $request)
     {
-        $student = $request->user()->student;
+        // ->student()->first() (não ->student) evita relação em cache — importante
+        // quando o mesmo objeto de usuário autenticado pode ser reaproveitado
+        // entre chamadas (ex.: em testes que encadeiam várias requisições).
+        $student = $request->user()->student()->first();
 
         if (! $student) {
             return ['data' => []];

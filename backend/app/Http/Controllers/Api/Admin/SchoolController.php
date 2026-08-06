@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\Admin\Concerns\ScopesToSchool;
+use App\Http\Controllers\Concerns\FormatsPagination;
 use App\Http\Controllers\Controller;
 use App\Models\School;
 use Illuminate\Http\Request;
@@ -10,14 +11,14 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class SchoolController extends Controller
 {
-    use ScopesToSchool;
+    use ScopesToSchool, FormatsPagination;
 
     public function index(Request $request)
     {
         $query = School::query()->orderBy('name');
         $this->scopeQueryToSchool($request, $query, 'id');
 
-        return ['data' => $query->paginate(20)];
+        return $this->paginated($query->paginate(20));
     }
 
     public function show(Request $request, School $school)
