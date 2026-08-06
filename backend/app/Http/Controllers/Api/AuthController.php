@@ -40,7 +40,10 @@ class AuthController extends Controller
             ]);
         }
 
-        Auth::login($user);
+        // Guard explícito: em alguns contextos (ex.: chamadas encadeadas em testes)
+        // o guard "default" resolvido pela facade sem argumento pode não ser o
+        // guard de sessão 'web' que a autenticação por cookie do Sanctum SPA espera.
+        Auth::guard('web')->login($user);
         $request->session()->regenerate();
 
         $user->forceFill(['last_login_at' => now()])->save();

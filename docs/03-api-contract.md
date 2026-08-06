@@ -240,10 +240,14 @@ GET  /api/teacher/reports/class/{classId}/export?format=pdf|xlsx|csv
 
 Todos os recursos abaixo seguem o **mesmo padrão REST**: `GET` (lista paginada + filtros), `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` (soft delete). Detalhado uma vez aqui; não repetido por recurso.
 
+**Escopo por perfil** (já implementado no backend): `school_admin` só lista/edita registros da própria escola (`schools`, `classes`, `users` — tentativa de acessar outra escola devolve `403`); cadastros de rede (`grades`, `subjects`, `skills`, `school-years`) são só-leitura pra `school_admin` e escrita é exclusiva de `department_admin`/`super_admin`. `school_admin` também não pode criar usuário com role `department_admin`/`super_admin` (bloqueio de escalada de privilégio).
+
 ```
 /api/admin/schools
-/api/admin/users
+/api/admin/users               (body de criação inclui role; se role=student, exige registration_number + class_id — cria o Student junto)
 /api/admin/classes
+/api/admin/grades
+/api/admin/school-years
 /api/admin/subjects
 /api/admin/skills
 /api/admin/campaigns          + POST /api/admin/campaigns/{id}/publish
