@@ -79,33 +79,185 @@ Cloudflare (DNS proxied · SSL Full Strict)
 
 Como front e back agora são a **mesma origem**, a autenticação do Sanctum usa cookies httpOnly com `SESSION_DOMAIN=null` (escopo automático pro host exato) — mais simples que o cenário multi-subdomínio, e ainda mais seguro contra XSS que token em `localStorage`. `config/cors.php` continua existindo (adicionado em 2026-08-06 — estava faltando e quebrava qualquer chamada cross-origin, inclusive em dev local) como defesa em profundidade, mas deixa de ser estritamente necessário em produção por conta da mesma origem.
 
-## 5. Checklist de infraestrutura (execução manual sua, no CyberPanel/Cloudflare)
+## 5. Checklist de infraestrutura — ✅ feito em produção em 2026-08-06
 
-1. CyberPanel → criar o site `bora.educacaocaraguatatuba.com.br` (um domínio só, não dois).
-2. CyberPanel → emitir SSL (AutoSSL/Let's Encrypt) para esse domínio.
-3. CyberPanel → definir PHP 8.3 como versão ativa do site.
-4. Cloudflare → registro DNS (A ou CNAME) para `bora`, com proxy **ativado** (nuvem laranja).
-5. Cloudflare → SSL/TLS → modo **Full (strict)**.
-6. Criar banco MySQL + usuário dedicado via phpMyAdmin (não usar root; permissões só no banco do projeto).
-7. Instalar Node.js LTS + PM2 no VPS via SSH, se ainda não houver.
-8. Editar o `vhost.conf` do site (OpenLiteSpeed) pra ter: um contexto **Proxy** em `/` apontando pra `127.0.0.1:3000` (Next.js/PM2), e dois contextos **PHP** (LSAPI) em `/api` e `/sanctum` apontando pro docroot `backend/public` (Laravel já resolve o prefixo `/api` internamente — é o padrão do Laravel 11). Ver roteiro completo de deploy (comandos + trecho de `vhost.conf`) no histórico da conversa de 2026-08-06 com o Claude; vale colar aqui depois de validado em produção.
+Caminho real do projeto na VPS: `/home/educacaocaraguatatuba.com.br/domains/bora` (não `bora.educacaocaraguatatuba.com.br/` — essa pasta existia por padrão do CyberPanel mas foi só um estágio intermediário; o `docRoot` do vhost aponta pra dentro de `domains/bora/backend/public`). Dono dos arquivos: usuário do sistema `educa3642` (o mesmo que roda o PHP via LSAPI — rodar `composer`/`npm`/`artisan` sempre como esse usuário, via `sudo su - educa3642`, nunca como o usuário pessoal do admin).
 
-A partir daqui (deploy do código em si) fico responsável quando o projeto estiver pronto para subir — deixo os comandos documentados abaixo para quando chegarmos lá.
+1. CyberPanel → site `bora.educacaocaraguatatuba.com.br` criado, SSL emitido (Let's Encrypt, já configurado em `vhssl` no vhost.conf).
+2. PHP 8.3 (`lsphp83`) ativo pro site.
+3. Cloudflare → DNS proxied (nuvem laranja) + SSL/TLS Full Strict.
+4. MySQL: banco + usuário dedicados via phpMyAdmin (não root).
+5. Node.js 20 + PM2 instalados; app registrado com `pm2 start npm --name bora-frontend -- start -- -p 3000 -H 127.0.0.1`, `pm2 save`, e `pm2 startup systemd -u educa3642 --hp /home/educacaocaraguatatuba.com.br` rodado como root (`nilton.prado`, via sudo) pra sobreviver a reboot.
+6. **`vhost.conf` do OpenLiteSpeed** — a parte que mais deu trabalho, documentada em detalhe abaixo.
 
-### Deploy do Laravel (referência)
+### 5.1 `vhost.conf` final que funciona (roteamento de domínio único)
+
+Depois de várias tentativas erradas (guardadas aqui como aviso pra não repetir — ver seção 5.2), a combinação que funcionou:
+
+- `docRoot` aponta direto pro `backend/public` (Laravel é o handler "padrão" do vhost inteiro).
+- **Nenhum** rewrite `[P]` no bloco `rewrite {}` (essa abordagem nunca funcionou nesse OpenLiteSpeed/CyberPanel — sempre dava `Proxy target is not defined on external application list`, mesmo testando `type proxy` e `type webserver` no `extprocessor`, e mesmo com a sintaxe heredoc `<<<END_rules ... END_rules` correta).
+- Em vez disso, **Contexts** explícitos: `/api` e `/sanctum` (PHP, apontando pro mesmo `backend/public`, com rewrite interno pra `index.php`) e `/` (tipo `proxy`, referenciando um `extprocessor` nomeado do tipo `proxy` — esse padrão, via Context + `handler`, funciona; o rewrite `[P]` direto não).
+
+```
+docRoot                   /home/educacaocaraguatatuba.com.br/domains/bora/backend/public
+vhDomain                  $VH_NAME
+vhAliases                 www.$VH_NAME
+adminEmails               informatica.educativa@caraguatatuba.sp.gov.br
+enableGzip                1
+enableIpGeo               1
+
+index  {
+  useServer               0
+  indexFiles              index.php, index.html
+}
+
+errorlog $VH_ROOT/logs/educacaocaraguatatuba.com.br.error_log {
+  useServer               0
+  logLevel                WARN
+  rollingSize             10M
+}
+
+accesslog $VH_ROOT/logs/educacaocaraguatatuba.com.br.access_log {
+  useServer               0
+  logFormat               "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\""
+  logHeaders              5
+  rollingSize             10M
+  keepDays                10
+  compressArchive         1
+}
+
+phpIniOverride  {
+
+}
+
+scripthandler  {
+  add                     lsapi:educa36425512 php
+}
+
+extprocessor educa36425512 {
+  type                    lsapi
+  address                 UDS://tmp/lshttpd/educa36425512.sock
+  maxConns                10
+  env                     LSAPI_CHILDREN=10
+  initTimeout             60
+  retryTimeout            0
+  persistConn             1
+  pcKeepAliveTimeout      1
+  respBuffer              0
+  autoStart               1
+  path                    /usr/local/lsws/lsphp83/bin/lsphp
+  extUser                 educa3642
+  extGroup                educa3642
+  memSoftLimit            2047M
+  memHardLimit            2047M
+  procSoftLimit           400
+  procHardLimit           500
+}
+
+extprocessor nextjs-bora {
+  type                    proxy
+  address                 127.0.0.1:3000
+  maxConns                100
+  initTimeout             60
+  retryTimeout            0
+  respBuffer              0
+}
+
+rewrite  {
+  enable                  1
+  autoLoadHtaccess        1
+}
+
+context /.well-known/acme-challenge {
+  location                /usr/local/lsws/Example/html/.well-known/acme-challenge
+  allowBrowse             1
+  rewrite  {
+    enable                  0
+  }
+  addDefaultCharset       off
+  phpIniOverride  {
+
+  }
+}
+
+context /api {
+  location                /home/educacaocaraguatatuba.com.br/domains/bora/backend/public
+  allowBrowse             1
+  rewrite  {
+    enable                  1
+    rules                    RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L]
+  }
+  addDefaultCharset       off
+  phpIniOverride  {
+
+  }
+}
+
+context /sanctum {
+  location                /home/educacaocaraguatatuba.com.br/domains/bora/backend/public
+  allowBrowse             1
+  rewrite  {
+    enable                  1
+    rules                    RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L]
+  }
+  addDefaultCharset       off
+  phpIniOverride  {
+
+  }
+}
+
+context / {
+  type                    proxy
+  handler                 nextjs-bora
+  addDefaultCharset       off
+}
+
+vhssl  {
+  keyFile                 /etc/letsencrypt/live/bora.educacaocaraguatatuba.com.br/privkey.pem
+  certFile                /etc/letsencrypt/live/bora.educacaocaraguatatuba.com.br/fullchain.pem
+  certChain               1
+  sslProtocol             24
+  enableECDHE             1
+  renegProtection         1
+  sslSessionCache         1
+  enableSpdy              15
+  enableStapling           1
+  ocspRespMaxAge           86400
+}
+```
+
+**Não** tem bloco `module cache { storagePath ... }` (LSCache) — foi removido de propósito. Ele guardava respostas de rotas de API/autenticadas (`/api/*`, `/sanctum/*`) em cache no próprio servidor, o que além de causar bugs de "resposta desatualizada" durante o próprio deploy, é um risco real de segurança num app com sessão (poderia vazar resposta de um usuário pra outro). O Next.js já faz o próprio cache de página; não precisa de mais uma camada aqui.
+
+### 5.2 A pegadinha que mais custou tempo: `SCRIPT_NAME` e o front controller do Laravel
+
+Mesmo com os Contexts `/api`/`/sanctum` corretos (acima), toda chamada pra essas rotas dava **404 do próprio Laravel** (`Route [login] not defined` ou `The route campaigns could not be found`) — a rota existia (`php artisan route:list` confirmava), mas o framework recebia o caminho **sem o prefixo** (`/campaigns` em vez de `/api/campaigns`).
+
+Causa: quando o OpenLiteSpeed serve um Context que "monta" o app num sub-caminho (aqui, `/api` e `/sanctum`, dentro de um vhost cujo domínio principal serve outra coisa), ele define `SCRIPT_NAME`/`PHP_SELF` refletindo esse sub-caminho. O Symfony (por baixo do Laravel) usa isso pra calcular a "base URL" do app e subtrai esse prefixo da URI antes de rotear.
+
+Correção, em [backend/public/index.php](../backend/public/index.php): forçar `$_SERVER['SCRIPT_NAME']` e `$_SERVER['PHP_SELF']` pra `/index.php` incondicionalmente, antes de `Request::capture()`. Como esse arquivo está sempre fisicamente na raiz de `public/`, esse valor é sempre correto — em dev local, em produção normal, ou nesse cenário de Context. Não quebra nenhum outro ambiente (38 testes locais continuam passando).
+
+### 5.3 Tentativas que NÃO funcionaram (não repetir)
+
+- `rewrite { rules RewriteRule ^(.*)$ http://127.0.0.1:3000$1 [P,L] }` (com ou sem sintaxe heredoc, com `extprocessor` do tipo `proxy` ou `webserver` nomeado igual ao endereço) — sempre deu `[REWRITE] Proxy target is not defined on external application list`. Não descobrimos a sintaxe certa; a alternativa via Context (`type proxy` + `handler`) funciona e foi o que ficou.
+- Context `/` (proxy) **sem** Context dedicado pra `/api`/`/sanctum` — o Context `/` vira o "pega tudo" e engole as rotas de API também, já que nada mais específico as intercepta antes.
+- `module cache` (LSCache) ativo no mesmo vhost que serve API autenticada — cache fica dessincronizado do código real e é risco de vazamento de dado entre usuários.
+
+### Deploy do Laravel (referência, depois do setup inicial acima)
 ```bash
+sudo su - educa3642
 cd /home/educacaocaraguatatuba.com.br/domains/bora
-git pull   # ou git clone na primeira vez
+git pull
 cd backend
 composer install --no-dev --optimize-autoloader
-cp .env.example .env   # só na primeira vez — depois editar à mão, nunca sobrescrever
-php artisan key:generate
-php artisan migrate --force   # --seed só na primeira vez, e só os seeders de catálogo (ver nota abaixo)
-php artisan storage:link
+php artisan migrate --force
 php artisan config:cache && php artisan route:cache
 ```
-`.env` relevante:
+`.env` relevante (não sobrescrever depois da primeira vez — `.env` não vem do git):
 ```
+APP_ENV=production
+APP_DEBUG=false
 APP_URL=https://bora.educacaocaraguatatuba.com.br
 SANCTUM_STATEFUL_DOMAINS=bora.educacaocaraguatatuba.com.br
 SESSION_DOMAIN=null
@@ -114,21 +266,31 @@ DB_CONNECTION=mysql
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 ```
-> Nota: `DatabaseSeeder` roda também `CaraguatatubaCampaignSeeder` (conteúdo de demonstração, ~8 questões — não é o conteúdo final do MVP, que ainda depende da Sprint 4). Rodar em produção só se quiser algo pra testar/mostrar antes do conteúdo real; senão, semear só os catálogos (`RoleSeeder`, `LevelSeeder`, `GradeSeeder`, `SubjectSeeder`, `SchoolYearSeeder`) via `--class=`.
+> Nota: `DatabaseSeeder` roda também `CaraguatatubaCampaignSeeder` (conteúdo de demonstração, ~8 questões — não é o conteúdo final do MVP, que ainda depende da Sprint 4). Em produção semeamos só os catálogos (`RoleSeeder`, `LevelSeeder`, `GradeSeeder`, `SubjectSeeder`, `SchoolYearSeeder`) via `--class=`, sem o conteúdo de demonstração.
 
-Cron (via CyberPanel → Cron Jobs, ou crontab direto):
+Cron (pendente confirmar se já está ativo — ver seção 9):
 ```
 * * * * * php /home/educacaocaraguatatuba.com.br/domains/bora/backend/artisan schedule:run >> /dev/null 2>&1
 ```
 
 ### Deploy do Next.js (referência)
 ```bash
+sudo su - educa3642
 cd /home/educacaocaraguatatuba.com.br/domains/bora
+git pull
 npm ci
 echo "NEXT_PUBLIC_API_URL=https://bora.educacaocaraguatatuba.com.br" > .env.production
 npm run build   # NEXT_PUBLIC_* é embutido no bundle NO BUILD — precisa do .env.production antes desse passo
-pm2 start npm --name bora-frontend -- start -- -p 3000 -H 127.0.0.1
-pm2 save && pm2 startup
+pm2 restart bora-frontend
+pm2 save
+```
+
+### Cloudflare — regra de cache obrigatória
+
+Sem isso, respostas de `/api/*`/`/sanctum/*` podem ficar presas em cache do CDN (foi um dos bugs que mais confundiu durante o deploy). Cloudflare → **Caching → Cache Rules**:
+```
+(starts_with(http.request.uri.path, "/api/")) or (starts_with(http.request.uri.path, "/sanctum/"))
+→ Elegibilidade de cache: Ignorar cache (Bypass)
 ```
 
 ## 6. Divisão de trabalho
@@ -156,7 +318,7 @@ pm2 save && pm2 startup
 | 2 — Núcleo pedagógico + Gameplay | Modelagem campanha → missão → etapa → questão; CRUD admin (com options/hints/location aninhados); fluxo de tentativa completo (8 tipos de questão); pontuação (Haversine + pistas + tempo + sequência); XP/níveis/conquistas; passaporte; seed de demonstração (campanha "Conhecendo Caraguatatuba", 3 missões, 8 questões) | ✅ Concluído (2026-08-06) — 20 testes de feature passando |
 | 3 — Painéis e relatórios | `/api/teacher/*` (turmas, atividades + resultados, relatório de turma + export CSV); `/api/reports/*` (escola e rede, com habilidades críticas, taxa de participação/conclusão) | ✅ Concluído (2026-08-06) — 29 testes de feature passando |
 | 3.5 — Gamificação avançada | Sequência de dias (streak_days, antes só uma coluna não usada); colecionáveis (brief seção 18 — nunca existia); avatar ilustrado com acessório desbloqueável (nunca foto real, decisão LGPD/ECA); recompensa de missão/conquista modelada (`reward_collectible_item_id`) | ✅ Concluído (2026-08-07) — 38 testes de feature passando |
-| 4 — Polimento MVP | Export pdf/xlsx (hoje só csv); CRUD admin de `achievements`/`levels`/`collectible_items`; testes E2E; revisão de conteúdo real (as ~120 questões — trabalho pedagógico, não só código); deploy produção no CyberPanel | Pendente |
+| 4 — Polimento MVP | Export pdf/xlsx (hoje só csv); CRUD admin de `achievements`/`levels`/`collectible_items`; testes E2E; revisão de conteúdo real (as ~120 questões — trabalho pedagógico, não só código); deploy produção no CyberPanel | Deploy em produção ✅ concluído (2026-08-06, ver seção 5); resto pendente |
 
 Escopo do MVP, público e volume de conteúdo seguem exatamente a seção 50 do brief (3 campanhas, 6º/7º anos, ~120 questões) — o seed atual (~8 questões) é só prova de que o pipeline funciona ponta a ponta, não o conteúdo final.
 
