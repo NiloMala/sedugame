@@ -8,12 +8,13 @@ Monorepo único: **https://github.com/NiloMala/sedugame.git** (branch principal 
 
 ```
 sedugame/
-├── docs/       ← este diretório (arquitetura, schema, contrato de API, prompt do GPT)
+├── docs/       ← este diretório (arquitetura, schema, contrato de API, histórico de revisões do frontend)
 ├── backend/    ← projeto Laravel 11 (eu)
-└── frontend/   ← projeto Next.js (GPT, ver 04-prompt-frontend-gpt.md)
+├── app/, components/, lib/, public/  ← projeto Next.js (GPT), na raiz do repo
+├── package.json, next.config.mjs, tsconfig.json, tailwind.config.ts  ← config do Next.js
 ```
 
-Um clone só, um `.gitignore` só na raiz cobrindo `backend/vendor`, `backend/.env`, `frontend/node_modules`, `frontend/.next`, etc. O código que o GPT gerar deve ser colocado dentro de `frontend/` neste mesmo repositório — não em um repositório separado.
+> **Nota (2026-08-06)**: o plano original previa o Next.js dentro de `frontend/`. Na prática o GPT gerou o projeto direto na raiz do repositório, e por simplicidade decidimos manter assim em vez de reorganizar — reduziria risco reescrever imports/config à toa. `backend/` continua isolado na sua própria pasta. Um `.gitignore` só na raiz cobre `backend/vendor`, `backend/.env`, `node_modules/`, `.next/`, etc.
 
 ## 2. Decisões que divergem do brief original
 

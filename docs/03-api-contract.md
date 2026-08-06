@@ -219,9 +219,34 @@ POST /api/attempts/{id}/hints/{hintId}   -> revela conteúdo da pista e já apli
 
 ### Passaporte, conquistas e atividades
 ```
-GET /api/passport            -> perfil gamificado completo do aluno logado (nível, XP, campanhas concluídas, locais visitados, medalhas, desempenho por disciplina)
+GET /api/passport            -> perfil gamificado completo do aluno logado (shape exato abaixo)
 GET /api/achievements         -> todas as conquistas + quais o aluno já desbloqueou
 GET /api/activities            -> atividades atribuídas às turmas do aluno logado (id, campaign, prazo, status, melhor tentativa)
+```
+
+`GET /api/passport` — resposta (chaves fixas; o frontend não precisa mais adivinhar entre nomes alternativos):
+```json
+{
+  "data": {
+    "name": "Maria Silva",
+    "school": "EMEF João de Barro",
+    "class": "6ºA",
+    "level": { "id": 2, "name": "Aprendiz de Viajante", "order": 2 },
+    "experience": 1340,
+    "completed_campaigns": [
+      { "id": 1, "title": "Conhecendo Caraguatatuba", "completed_at": "2026-05-10T14:00:00Z" }
+    ],
+    "locations_visited": [
+      { "id": 6, "name": "Serra do Mar", "latitude": -23.62, "longitude": -45.41 }
+    ],
+    "achievements": [
+      { "id": 5, "title": "Explorador de Caraguatatuba", "icon": "🏔️", "unlocked_at": "2026-05-10T14:00:00Z" }
+    ],
+    "performance_by_subject": [
+      { "subject": "Geografia", "accuracy_percent": 82 }
+    ]
+  }
+}
 ```
 
 ---
