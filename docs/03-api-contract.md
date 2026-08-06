@@ -169,7 +169,10 @@ POST /api/attempts
 ```
 ```
 GET /api/attempts/{id}/next-question
-  -> retorna a próxima questão não respondida da tentativa (statement, options SEM is_correct, hints disponíveis SEM content revelado)
+  -> 200 retorna a próxima questão não respondida da tentativa (statement, options SEM is_correct, hints disponíveis SEM content revelado)
+  -> 404 { "message": "no_more_questions" } quando a tentativa não tem mais questões pendentes — é o sinal pro frontend chamar POST /api/attempts/{id}/complete.
+     Esse 404 é o ÚNICO status que deve ser interpretado como "missão concluída". Qualquer outro erro (401, 419 sessão expirada, 500, falha de rede)
+     é uma falha real e deve mostrar estado de erro, nunca a tela de conclusão — checar o status/message antes de decidir, não só "deu erro".
 ```
 ```
 POST /api/attempts/{id}/answers

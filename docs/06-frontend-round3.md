@@ -45,6 +45,26 @@ Preciso que a tela volte a ter:
 Não precisa mexer em mais nada fora desse arquivo.
 ```
 
+## Verificação da Prioridade 1 (2026-08-06) — aprovado, com 1 ajuste fino
+
+Conferi o código reconstruído: `attemptId` com setter funcionando, os 8 tipos de questão implementados de verdade, layout mapa/imagem + narrativa + progresso + cronômetro + pistas, tela de conclusão com celebração visual boa. Aprovado.
+
+Achei só um ponto pra apertar — não é bug de vocês, é porque o contrato nunca deixou isso explícito (já corrigi em `docs/03-api-contract.md`):
+
+```
+Em app/play/[missionId]/page.tsx, o useEffect que decide que a missão terminou hoje
+dispara em QUALQUER erro de question.isError — inclusive queda de rede, sessão
+expirada (401/419) ou erro real do servidor (500). Isso mostra a tela de celebração
+falsa com pontuação zerada quando na verdade algo deu errado.
+
+O contrato agora deixa explícito: GET /api/attempts/{id}/next-question retorna 404
+com { "message": "no_more_questions" } quando (e só quando) a missão realmente
+acabou. Ajuste o useEffect (ou o hook useAttempt) pra só chamar complete.mutate()
+quando o erro for especificamente esse 404 — outros erros devem cair num estado de
+falha visível (pode reusar o componente Failure que vocês já têm), não na tela de
+conclusão.
+```
+
 ## Prioridade 2 — deixar o jogo visualmente mais forte pros alunos
 
 ```
