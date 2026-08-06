@@ -262,6 +262,38 @@ GET  /api/teacher/reports/class/{classId}
 GET  /api/teacher/reports/class/{classId}/export?format=pdf|xlsx|csv
 ```
 
+> **Implementado até aqui**: `format=csv` funciona (streaming nativo do Laravel, sem dependência extra). `pdf`/`xlsx` respondem `422` por enquanto — exigem escolher e instalar uma lib (`barryvdh/laravel-dompdf`, `maatwebsite/excel`), fica pra quando um desses formatos for realmente pedido por um usuário real, não antes.
+
+Todas as rotas de professor exigem que a turma pertença a ele (`teacher_classes`) — tentar acessar turma/atividade de outro professor devolve `403`.
+
+---
+
+## Painéis da Escola / Secretaria (`/api/reports/*`)
+
+Autorização: `coordinator`/`director`/`school_admin` só a própria escola (`request.user.school_id`); `department_admin`/`super_admin` qualquer escola + rede toda. Ver tabela na seção "Autorização por perfil" abaixo.
+
+```
+GET /api/reports/network                 -> indicadores de toda a rede (só department_admin/super_admin)
+GET /api/reports/school/{id}             -> indicadores da escola (seção 28 do brief)
+GET /api/reports/class/{id}
+GET /api/reports/student/{id}
+```
+
+Shape comum (`school`/`network` incluem também `total_students`, `total_teachers`, `classes_count`/`schools_count`, `activities_applied`/`campaigns_used`, `participation_rate`, `completion_rate`):
+```json
+{
+  "data": {
+    "attempts_count": 42,
+    "average_score": 780,
+    "accuracy_percent": 68,
+    "average_time_seconds": 35,
+    "critical_skills": [
+      { "skill": "Reconhecer biomas...", "accuracy_percent": 41, "attempts": 12 }
+    ]
+  }
+}
+```
+
 ---
 
 ## Área Administrativa (Secretaria / Escola)

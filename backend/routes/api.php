@@ -21,7 +21,11 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\MissionController;
 use App\Http\Controllers\Api\PassportController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StudentActivityController;
+use App\Http\Controllers\Api\Teacher\ActivityController as TeacherActivityController;
+use App\Http\Controllers\Api\Teacher\ClassController as TeacherClassController;
+use App\Http\Controllers\Api\Teacher\ReportController as TeacherReportController;
 use Illuminate\Support\Facades\Route;
 
 // Autenticação — ver docs/03-api-contract.md
@@ -48,6 +52,27 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/passport', [PassportController::class, 'show']);
         Route::get('/achievements', [AchievementController::class, 'index']);
+    });
+
+    // Professor
+    Route::middleware('role:teacher')->prefix('teacher')->group(function () {
+        Route::get('/classes', [TeacherClassController::class, 'index']);
+        Route::get('/classes/{class}/students', [TeacherClassController::class, 'students']);
+
+        Route::get('/activities', [TeacherActivityController::class, 'index']);
+        Route::post('/activities', [TeacherActivityController::class, 'store']);
+        Route::get('/activities/{activity}/results', [TeacherActivityController::class, 'results']);
+
+        Route::get('/reports/class/{class}', [TeacherReportController::class, 'classReport']);
+        Route::get('/reports/class/{class}/export', [TeacherReportController::class, 'export']);
+    });
+
+    // Painéis da Escola/Secretaria — autorização por escola x rede dentro do controller.
+    Route::middleware('role:coordinator,director,school_admin,department_admin,super_admin')->prefix('reports')->group(function () {
+        Route::get('/network', [ReportController::class, 'network']);
+        Route::get('/school/{school}', [ReportController::class, 'school']);
+        Route::get('/class/{class}', [ReportController::class, 'schoolClass']);
+        Route::get('/student/{student}', [ReportController::class, 'student']);
     });
 
     // Administração (Secretaria/Escola). Escopo por escola x rede é resolvido
