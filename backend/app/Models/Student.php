@@ -10,12 +10,13 @@ class Student extends Model
 {
     protected $fillable = [
         'user_id', 'registration_number', 'school_id', 'class_id', 'birth_date',
-        'status', 'experience', 'streak_days',
+        'status', 'experience', 'streak_days', 'avatar_base', 'equipped_accessory_id',
+        'last_activity_date',
     ];
 
     protected function casts(): array
     {
-        return ['birth_date' => 'date'];
+        return ['birth_date' => 'date', 'last_activity_date' => 'date'];
     }
 
     public function level(): ?Level
@@ -51,5 +52,36 @@ class Student extends Model
     public function achievements(): HasMany
     {
         return $this->hasMany(StudentAchievement::class);
+    }
+
+    public function collectibles(): HasMany
+    {
+        return $this->hasMany(StudentCollectible::class);
+    }
+
+    public function equippedAccessory(): BelongsTo
+    {
+        return $this->belongsTo(CollectibleItem::class, 'equipped_accessory_id');
+    }
+
+    /**
+     * Atualiza streak_days com base em last_activity_date. Chamado ao
+     * concluir uma tentativa (ProgressionService::applyCompletion).
+     */
+    public function registerActivityToday(): void
+    {
+        $today = now()->toDateString();
+
+        if ($this->last_activity_date?->toDateString() === $today) {
+            return; // já contou hoje
+        }
+
+        $yesterday = now()->subDay()->toDateString();
+        $this->streak_days = $this->last_activity_date?->toDateString() === $yesterday
+            ? $this->streak_days + 1
+            : 1;
+
+        $this->last_activity_date = $today;
+        $this->save();
     }
 }

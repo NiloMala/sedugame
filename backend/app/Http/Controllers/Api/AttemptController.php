@@ -175,6 +175,14 @@ class AttemptController extends Controller
                 'title' => $achievement->title,
                 'icon' => $achievement->icon,
             ])->values(),
+            'collectibles_unlocked' => $result['collectibles_unlocked']->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'category' => $item->category,
+                'icon' => $item->icon,
+                'image_url' => $item->image_url,
+                'rarity' => $item->rarity,
+            ])->values(),
         ]];
     }
 

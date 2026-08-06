@@ -145,7 +145,8 @@ pm2 save && pm2 startup
 | 1 — Fundação | Setup Laravel + Next.js, ambientes dev/hml/prod, Sanctum, roles/permissions (aluno, professor, admin), CRUD de escolas/turmas/disciplinas/habilidades | ✅ Concluído (2026-08-06) |
 | 2 — Núcleo pedagógico + Gameplay | Modelagem campanha → missão → etapa → questão; CRUD admin (com options/hints/location aninhados); fluxo de tentativa completo (8 tipos de questão); pontuação (Haversine + pistas + tempo + sequência); XP/níveis/conquistas; passaporte; seed de demonstração (campanha "Conhecendo Caraguatatuba", 3 missões, 8 questões) | ✅ Concluído (2026-08-06) — 20 testes de feature passando |
 | 3 — Painéis e relatórios | `/api/teacher/*` (turmas, atividades + resultados, relatório de turma + export CSV); `/api/reports/*` (escola e rede, com habilidades críticas, taxa de participação/conclusão) | ✅ Concluído (2026-08-06) — 29 testes de feature passando |
-| 4 — Polimento MVP | Export pdf/xlsx (hoje só csv); CRUD admin de `achievements`/`levels`; testes E2E; revisão de conteúdo real (as ~120 questões — trabalho pedagógico, não só código); deploy produção no CyberPanel | Pendente |
+| 3.5 — Gamificação avançada | Sequência de dias (streak_days, antes só uma coluna não usada); colecionáveis (brief seção 18 — nunca existia); avatar ilustrado com acessório desbloqueável (nunca foto real, decisão LGPD/ECA); recompensa de missão/conquista modelada (`reward_collectible_item_id`) | ✅ Concluído (2026-08-07) — 38 testes de feature passando |
+| 4 — Polimento MVP | Export pdf/xlsx (hoje só csv); CRUD admin de `achievements`/`levels`/`collectible_items`; testes E2E; revisão de conteúdo real (as ~120 questões — trabalho pedagógico, não só código); deploy produção no CyberPanel | Pendente |
 
 Escopo do MVP, público e volume de conteúdo seguem exatamente a seção 50 do brief (3 campanhas, 6º/7º anos, ~120 questões) — o seed atual (~8 questões) é só prova de que o pipeline funciona ponta a ponta, não o conteúdo final.
 

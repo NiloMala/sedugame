@@ -5,15 +5,17 @@ namespace App\Services;
 use App\Models\Achievement;
 use App\Models\Attempt;
 use App\Models\AttemptAnswer;
-use App\Models\Level;
+use App\Models\CollectibleItem;
 use App\Models\Student;
 use App\Models\StudentAchievement;
+use App\Models\StudentCollectible;
 use App\Models\StudentProgress;
 use Illuminate\Support\Collection;
 
 /**
- * XP, subida de nível e desbloqueio de conquistas — seção 16 do brief.
- * Roda no fechamento de uma tentativa (Attempt::complete).
+ * XP, subida de nível, sequência de dias, conquistas e colecionáveis —
+ * seções 16/18 do brief. Roda no fechamento de uma tentativa
+ * (Attempt::complete).
  */
 class ProgressionService
 {
@@ -30,10 +32,11 @@ class ProgressionService
     }
 
     /**
-     * Aplica XP, atualiza student_progress e devolve o resultado consolidado
-     * pra resposta de POST /api/attempts/{id}/complete.
+     * Aplica XP, sequência de dias, colecionável de recompensa da missão,
+     * atualiza student_progress e devolve o resultado consolidado pra
+     * resposta de POST /api/attempts/{id}/complete.
      *
-     * @return array{score:int, experience_gained:int, level_up:bool, achievements_unlocked: Collection<int, Achievement>}
+     * @return array{score:int, experience_gained:int, level_up:bool, achievements_unlocked: Collection<int, Achievement>, collectibles_unlocked: Collection<int, CollectibleItem>}
      */
     public function applyCompletion(Attempt $attempt): array
     {
@@ -42,6 +45,7 @@ class ProgressionService
 
         $experienceGained = $this->experienceForAttempt($attempt);
         $student->increment('experience', $experienceGained);
+        $student->registerActivityToday();
         $student->refresh();
 
         $levelAfter = $student->level();
@@ -49,13 +53,16 @@ class ProgressionService
 
         $this->updateProgress($attempt);
 
-        $unlocked = $this->unlockAchievements($student, $attempt);
+        $collectiblesUnlocked = $this->grantMissionReward($student, $attempt);
+        $achievementsUnlocked = $this->unlockAchievements($student, $attempt);
+        $collectiblesUnlocked = $collectiblesUnlocked->merge($this->collectiblesFromAchievements($student, $achievementsUnlocked));
 
         return [
             'score' => $attempt->score,
             'experience_gained' => $experienceGained,
             'level_up' => $levelUp,
-            'achievements_unlocked' => $unlocked,
+            'achievements_unlocked' => $achievementsUnlocked,
+            'collectibles_unlocked' => $collectiblesUnlocked,
         ];
     }
 
@@ -72,6 +79,51 @@ class ProgressionService
         $progress->progress_percent = 100;
         $progress->completed_at = now();
         $progress->save();
+    }
+
+    /**
+     * Concede o colecionável de recompensa da missão (se tiver e o aluno
+     * ainda não tiver) — seção 10 do brief ("recompensa" como atributo de
+     * missão, nunca modelado até agora).
+     *
+     * @return Collection<int, CollectibleItem>
+     */
+    private function grantMissionReward(Student $student, Attempt $attempt): Collection
+    {
+        return collect([$this->grantCollectible($student, $attempt->mission?->reward_collectible_item_id)])->filter();
+    }
+
+    /**
+     * @param  Collection<int, Achievement>  $achievements
+     * @return Collection<int, CollectibleItem>
+     */
+    private function collectiblesFromAchievements(Student $student, Collection $achievements): Collection
+    {
+        return $achievements
+            ->map(fn (Achievement $achievement) => $this->grantCollectible($student, $achievement->reward_collectible_item_id))
+            ->filter()
+            ->values();
+    }
+
+    private function grantCollectible(Student $student, ?int $itemId): ?CollectibleItem
+    {
+        if (! $itemId) {
+            return null;
+        }
+
+        $alreadyOwned = StudentCollectible::where('student_id', $student->id)
+            ->where('collectible_item_id', $itemId)->exists();
+        if ($alreadyOwned) {
+            return null;
+        }
+
+        StudentCollectible::create([
+            'student_id' => $student->id,
+            'collectible_item_id' => $itemId,
+            'unlocked_at' => now(),
+        ]);
+
+        return CollectibleItem::find($itemId);
     }
 
     /**
@@ -121,6 +173,8 @@ class ProgressionService
                 ->where('is_correct', true)->count() >= ($value['count'] ?? PHP_INT_MAX),
 
             'mission_without_hints' => $attempt->answers()->sum('hints_used') === 0,
+
+            'streak_days' => $student->streak_days >= ($value['days'] ?? PHP_INT_MAX),
 
             'campaign_completed' => isset($value['campaign_id'])
                 && $attempt->campaign_id === (int) $value['campaign_id']

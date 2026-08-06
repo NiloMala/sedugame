@@ -99,6 +99,8 @@ class AuthController extends Controller
                     'experience_to_next_level' => $level && $level->maximum_experience
                         ? max(0, $level->maximum_experience - $student->experience)
                         : null,
+                    'streak_days' => $student->streak_days,
+                    'avatar_base' => $student->avatar_base,
                 ];
             }
         }

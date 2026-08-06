@@ -18,7 +18,9 @@ use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\AchievementController;
 use App\Http\Controllers\Api\AttemptController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AvatarController;
 use App\Http\Controllers\Api\CampaignController;
+use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\MissionController;
 use App\Http\Controllers\Api\PassportController;
 use App\Http\Controllers\Api\ReportController;
@@ -52,6 +54,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/passport', [PassportController::class, 'show']);
         Route::get('/achievements', [AchievementController::class, 'index']);
+        Route::get('/collections', [CollectionController::class, 'index']);
+        Route::get('/avatar', [AvatarController::class, 'show']);
+        Route::put('/avatar', [AvatarController::class, 'update']);
     });
 
     // Professor

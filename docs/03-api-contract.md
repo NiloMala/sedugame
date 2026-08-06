@@ -92,11 +92,14 @@ POST /api/admin/students/{id}/reset-password   (role: school_admin | department_
       "class": { "id": 5, "name": "6ºA" },
       "level": { "id": 2, "name": "Aprendiz de Viajante", "order": 2 },
       "experience": 1340,
-      "experience_to_next_level": 660
+      "experience_to_next_level": 660,
+      "streak_days": 4,
+      "avatar_base": "compass"
     }
   }
 }
 ```
+`avatar_url` (nível raiz, todos os perfis) é foto de perfil real — só faz sentido pra staff. `student.avatar_base` é o personagem ilustrado do aluno (nunca foto) — ver seção "Avatar e Coleções". Pra montar o avatar completo do aluno (base + acessório equipado), use `GET /api/avatar` ou `GET /api/passport`.
 O campo `role` é o slug (`student`, `teacher`, `coordinator`, `director`, `school_admin`, `department_admin`, `super_admin`) e define o que o frontend renderiza (menus, rotas protegidas). O objeto `student` só existe se `role === 'student'`; equivalente futuro para `teacher`.
 
 **Login simplificado do aluno** (seção 37 do brief) ainda não está definido — por ora, mesmo fluxo de email/senha para todos os perfis. Ver pergunta em aberto no [01-arquitetura-e-plano.md](./01-arquitetura-e-plano.md#8-perguntas-em-aberto).
@@ -208,10 +211,12 @@ POST /api/attempts/{id}/complete
       "score": 3200,
       "experience_gained": 320,
       "level_up": false,
-      "achievements_unlocked": [ { "id": 5, "title": "Explorador de Caraguatatuba", "icon": "..." } ]
+      "achievements_unlocked": [ { "id": 5, "title": "Explorador de Caraguatatuba", "icon": "..." } ],
+      "collectibles_unlocked": [ { "id": 12, "name": "Brasão de Caraguatatuba", "category": "coat_of_arms", "icon": "shield", "image_url": null, "rarity": "common" } ]
     }
   }
 ```
+`collectibles_unlocked` reúne tanto o colecionável de recompensa da própria missão (se tiver) quanto os concedidos por alguma conquista desbloqueada nesse mesmo `complete()` — ex.: completar uma missão sem pistas desbloqueia a conquista "Sem Pistas" **e** o acessório de avatar vinculado a ela, os dois no mesmo array.
 ```
 POST /api/attempts/{id}/hints/{hintId}   -> revela conteúdo da pista e já aplica score_penalty
   -> 200 { "data": { "content": "A região fica na faixa litorânea..." } }
@@ -233,6 +238,11 @@ GET /api/activities            -> atividades atribuídas às turmas do aluno log
     "class": "6ºA",
     "level": { "id": 2, "name": "Aprendiz de Viajante", "order": 2 },
     "experience": 1340,
+    "streak_days": 4,
+    "avatar": {
+      "base": "compass",
+      "accessory": { "id": 12, "name": "Binóculo Dourado", "icon": "binoculars" }
+    },
     "completed_campaigns": [
       { "id": 1, "title": "Conhecendo Caraguatatuba", "completed_at": "2026-05-10T14:00:00Z" }
     ],
@@ -242,12 +252,68 @@ GET /api/activities            -> atividades atribuídas às turmas do aluno log
     "achievements": [
       { "id": 5, "title": "Explorador de Caraguatatuba", "icon": "🏔️", "unlocked_at": "2026-05-10T14:00:00Z" }
     ],
+    "collectibles_count": 3,
     "performance_by_subject": [
       { "subject": "Geografia", "accuracy_percent": 82 }
     ]
   }
 }
 ```
+
+`avatar.base` é sempre um dos códigos de `GET /api/avatar` (nunca foto real — ver seção "Avatar e Coleções" abaixo).
+
+### Avatar e Coleções (brief seção 18 + extensão de avatar)
+
+**Decisão de produto**: avatar do aluno nunca é foto real enviada — é um personagem ilustrado pré-definido (6 opções fixas) mais um acessório opcional desbloqueado por coleção. Evita todo o problema de moderação/privacidade de imagem de criança/adolescente (LGPD/ECA). O frontend renderiza cada `code` como um ícone estilizado (os códigos batem com nomes de ícone do lucide-react, que o frontend já usa) — não precisa de nenhum arquivo de imagem novo.
+
+```
+GET /api/collections   -> catálogo inteiro de colecionáveis + quais o aluno já desbloqueou
+GET /api/avatar        -> avatar atual + opções disponíveis
+PUT /api/avatar         { avatar_base, equipped_accessory_id? }
+```
+
+`GET /api/collections` — resposta:
+```json
+{
+  "data": [
+    {
+      "id": 12, "name": "Brasão de Caraguatatuba", "description": "...",
+      "category": "coat_of_arms", "icon": "shield", "image_url": null, "rarity": "common",
+      "unlocked": true, "unlocked_at": "2026-05-10T14:00:00Z"
+    },
+    {
+      "id": 15, "name": "Selo da Mata Atlântica", "description": "...",
+      "category": "biome", "icon": "trees", "image_url": null, "rarity": "rare",
+      "unlocked": false, "unlocked_at": null
+    }
+  ]
+}
+```
+`category` é um de: `monument, animal, biome, map, historical_figure, coat_of_arms, flag, postcard, artifact, culture, avatar_accessory`. Só itens `avatar_accessory` podem ser equipados no avatar (`equipped_accessory_id` do `PUT /api/avatar`); os demais são só de exibição na tela de coleções.
+
+`GET /api/avatar` — resposta:
+```json
+{
+  "data": {
+    "avatar_base": "compass",
+    "equipped_accessory": { "id": 18, "name": "Binóculo Dourado", "icon": "binoculars" },
+    "available_bases": [
+      { "code": "compass", "label": "Bússola", "color": "#0EA5E9" },
+      { "code": "map", "label": "Mapa", "color": "#16A34A" },
+      { "code": "binoculars", "label": "Binóculo", "color": "#D97706" },
+      { "code": "telescope", "label": "Luneta", "color": "#7C3AED" },
+      { "code": "mountain", "label": "Montanha", "color": "#059669" },
+      { "code": "backpack", "label": "Mochila", "color": "#DC2626" }
+    ],
+    "unlocked_accessories": [
+      { "id": 18, "name": "Binóculo Dourado", "icon": "binoculars", "image_url": null }
+    ]
+  }
+}
+```
+`PUT /api/avatar` com `avatar_base` fora da lista de `available_bases` → `422`. Com `equipped_accessory_id` que o aluno não tem em `unlocked_accessories` → `422` (`"Você ainda não desbloqueou esse acessório."`).
+
+Como os itens são desbloqueados: cada **missão** pode ter um colecionável de recompensa (concedido uma vez, na primeira conclusão) e cada **conquista** também pode ter um colecionável vinculado — os dois aparecem em `collectibles_unlocked` na resposta de `POST /api/attempts/{id}/complete` (seção acima). Não existe compra com dinheiro real, conforme brief seção 18.
 
 ---
 

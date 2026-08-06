@@ -8,6 +8,7 @@ use App\Models\Campaign;
 use App\Models\Location;
 use App\Models\Mission;
 use App\Models\StudentAchievement;
+use App\Models\StudentCollectible;
 use App\Models\StudentProgress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,9 +31,19 @@ class PassportController extends Controller
             'class' => $student->schoolClass?->name,
             'level' => $this->levelPayload($student),
             'experience' => $student->experience,
+            'streak_days' => $student->streak_days,
+            'avatar' => [
+                'base' => $student->avatar_base,
+                'accessory' => $student->equippedAccessory ? [
+                    'id' => $student->equippedAccessory->id,
+                    'name' => $student->equippedAccessory->name,
+                    'icon' => $student->equippedAccessory->icon,
+                ] : null,
+            ],
             'completed_campaigns' => $this->completedCampaigns($student),
             'locations_visited' => $this->locationsVisited($student),
             'achievements' => $this->unlockedAchievements($student),
+            'collectibles_count' => StudentCollectible::where('student_id', $student->id)->count(),
             'performance_by_subject' => $this->performanceBySubject($student),
         ]];
     }

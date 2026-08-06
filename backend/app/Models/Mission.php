@@ -12,6 +12,7 @@ class Mission extends Model
     protected $fillable = [
         'campaign_id', 'title', 'slug', 'description', 'narrative', 'objective',
         'order', 'difficulty', 'estimated_minutes', 'max_score', 'status', 'unlock_rule',
+        'reward_collectible_item_id',
     ];
 
     protected function casts(): array
@@ -37,5 +38,10 @@ class Mission extends Model
     public function attempts(): HasMany
     {
         return $this->hasMany(Attempt::class);
+    }
+
+    public function rewardCollectible(): BelongsTo
+    {
+        return $this->belongsTo(CollectibleItem::class, 'reward_collectible_item_id');
     }
 }

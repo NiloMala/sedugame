@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Achievement;
 use App\Models\Campaign;
+use App\Models\CollectibleItem;
 use App\Models\Level;
 use App\Models\Location;
 use App\Models\Mission;
@@ -81,6 +82,8 @@ class CaraguatatubaCampaignSeeder extends Seeder
         $campaign->subjects()->syncWithoutDetaching([$geografia->id, $historia->id]);
         $campaign->skills()->syncWithoutDetaching([$skillLocalizacao->id, $skillBiomas->id, $skillHistoriaLocal->id]);
 
+        $collectibles = $this->seedCollectibles();
+
         // ── Missão 1: Chegando a Caraguatatuba ────────────────────────────
         $mission1 = Mission::updateOrCreate(
             ['campaign_id' => $campaign->id, 'slug' => 'chegando-a-caraguatatuba'],
@@ -93,6 +96,7 @@ class CaraguatatubaCampaignSeeder extends Seeder
                 'estimated_minutes' => 10,
                 'max_score' => 2000,
                 'status' => 'published',
+                'reward_collectible_item_id' => $collectibles['brasao']->id,
             ]
         );
         $stage1 = MissionStage::updateOrCreate(
@@ -140,6 +144,7 @@ class CaraguatatubaCampaignSeeder extends Seeder
                 'max_score' => 2000,
                 'status' => 'published',
                 'unlock_rule' => ['requires_mission_id' => $mission1->id],
+                'reward_collectible_item_id' => $collectibles['selo_mata_atlantica']->id,
             ]
         );
         $stage2 = MissionStage::updateOrCreate(
@@ -187,6 +192,7 @@ class CaraguatatubaCampaignSeeder extends Seeder
                 'max_score' => 2000,
                 'status' => 'published',
                 'unlock_rule' => ['requires_mission_id' => $mission2->id],
+                'reward_collectible_item_id' => $collectibles['bandeira_litoral_norte']->id,
             ]
         );
         $stage3 = MissionStage::updateOrCreate(
@@ -224,7 +230,7 @@ class CaraguatatubaCampaignSeeder extends Seeder
             ['text' => 'Depende diretamente do mar e das marés', 'side' => 'right', 'order' => 1],
         ]);
 
-        $this->seedLevelsAchievements($campaign);
+        $this->seedLevelsAchievements($campaign, $collectibles);
     }
 
     private function syncOptions(Question $question, array $options): void
@@ -239,7 +245,34 @@ class CaraguatatubaCampaignSeeder extends Seeder
         }
     }
 
-    private function seedLevelsAchievements(Campaign $campaign): void
+    /**
+     * Colecionáveis (brief seção 18) — alguns temáticos das campanhas
+     * (concedidos ao concluir a missão correspondente, ver reward_collectible_item_id
+     * em Mission), outros são acessórios de avatar (concedidos por conquista).
+     *
+     * @return array<string, \App\Models\CollectibleItem>
+     */
+    private function seedCollectibles(): array
+    {
+        $items = [
+            'brasao' => ['name' => 'Brasão de Caraguatatuba', 'category' => 'coat_of_arms', 'icon' => 'shield', 'rarity' => 'common',
+                'description' => 'Símbolo oficial do município, desbloqueado ao chegar à cidade.'],
+            'selo_mata_atlantica' => ['name' => 'Selo da Mata Atlântica', 'category' => 'biome', 'icon' => 'trees', 'rarity' => 'rare',
+                'description' => 'Marca sua passagem pela Serra do Mar e o bioma que a cobre.'],
+            'bandeira_litoral_norte' => ['name' => 'Bandeira do Litoral Norte', 'category' => 'flag', 'icon' => 'flag', 'rarity' => 'common',
+                'description' => 'Representa a região que reúne Caraguatatuba e cidades vizinhas.'],
+            'chapeu_explorador' => ['name' => 'Chapéu de Explorador', 'category' => 'avatar_accessory', 'icon' => 'hard-hat', 'rarity' => 'epic',
+                'description' => 'Acessório de avatar — recompensa por completar uma campanha inteira.'],
+            'binoculo_dourado' => ['name' => 'Binóculo Dourado', 'category' => 'avatar_accessory', 'icon' => 'binoculars', 'rarity' => 'rare',
+                'description' => 'Acessório de avatar — recompensa por observação atenta (missão sem pistas).'],
+        ];
+
+        return collect($items)->mapWithKeys(fn ($data, $key) => [
+            $key => CollectibleItem::firstOrCreate(['name' => $data['name']], $data + ['status' => 'active']),
+        ])->all();
+    }
+
+    private function seedLevelsAchievements(Campaign $campaign, array $collectibles): void
     {
         Achievement::firstOrCreate(
             ['title' => 'Primeira Expedição'],
@@ -247,15 +280,28 @@ class CaraguatatubaCampaignSeeder extends Seeder
         );
         Achievement::firstOrCreate(
             ['title' => 'Explorador de Caraguatatuba'],
-            ['description' => 'Concluiu toda a campanha Conhecendo Caraguatatuba.', 'icon' => '🏔️', 'rule_type' => 'campaign_completed', 'rule_value' => ['campaign_id' => $campaign->id], 'experience_reward' => 200, 'status' => 'active']
+            [
+                'description' => 'Concluiu toda a campanha Conhecendo Caraguatatuba.', 'icon' => '🏔️',
+                'rule_type' => 'campaign_completed', 'rule_value' => ['campaign_id' => $campaign->id],
+                'experience_reward' => 200, 'status' => 'active',
+                'reward_collectible_item_id' => $collectibles['chapeu_explorador']->id,
+            ]
         );
         Achievement::firstOrCreate(
             ['title' => 'Sem Pistas'],
-            ['description' => 'Concluiu uma missão sem usar nenhuma pista.', 'icon' => '🔍', 'rule_type' => 'mission_without_hints', 'experience_reward' => 80, 'status' => 'active']
+            [
+                'description' => 'Concluiu uma missão sem usar nenhuma pista.', 'icon' => '🔍',
+                'rule_type' => 'mission_without_hints', 'experience_reward' => 80, 'status' => 'active',
+                'reward_collectible_item_id' => $collectibles['binoculo_dourado']->id,
+            ]
         );
         Achievement::firstOrCreate(
             ['title' => '10 Acertos'],
             ['description' => 'Acertou 10 questões.', 'icon' => '⭐', 'rule_type' => 'correct_answers_count', 'rule_value' => ['count' => 10], 'experience_reward' => 100, 'status' => 'active']
+        );
+        Achievement::firstOrCreate(
+            ['title' => 'Sequência de 7 Dias'],
+            ['description' => 'Jogou por 7 dias seguidos.', 'icon' => '🔥', 'rule_type' => 'streak_days', 'rule_value' => ['days' => 7], 'experience_reward' => 150, 'status' => 'active']
         );
     }
 }
