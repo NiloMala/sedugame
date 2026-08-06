@@ -1,0 +1,1 @@
+import { ResourcePage } from '@/components/resource-page'; export default function Page(){return <ResourcePage title="Habilidades" description="Gerencie as habilidades curriculares." path="/api/admin/skills"/>}

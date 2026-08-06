@@ -1,0 +1,1 @@
+import { AppShell } from '@/components/shell'; export default function Page(){return <AppShell><h1 className="text-3xl font-bold">Relatórios</h1><section className="card mt-7 p-6 text-slate-600">Escolha uma turma em “Minhas turmas” para abrir o relatório correspondente.</section></AppShell>}

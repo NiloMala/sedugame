@@ -1,0 +1,3 @@
+'use client';
+import { AppShell } from '@/components/shell'; import { CampaignCard } from '@/components/gamification'; import { useCampaigns } from '@/lib/hooks';
+export default function CampaignsPage(){const {data,isLoading,error}=useCampaigns();return <AppShell><h1 className="text-3xl font-bold">Campanhas</h1><p className="mt-2 text-slate-600">Escolha um território e comece sua expedição.</p>{isLoading?<p className="mt-7">Carregando...</p>:error?<p className="mt-7" role="alert">{error.message}</p>:<div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{data?.map(c=><CampaignCard campaign={c} key={c.id}/>)}</div>}</AppShell>}

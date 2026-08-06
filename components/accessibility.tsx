@@ -1,0 +1,4 @@
+'use client';
+import { Accessibility, Contrast, Type, Rabbit } from 'lucide-react';
+import { useUiStore } from '@/lib/ui-store';
+export function AccessibilityControls() { const { highContrast, fontScale, reducedMotion, toggleContrast, setFontScale, toggleReducedMotion } = useUiStore(); return <div className="flex items-center gap-1" aria-label="Opções de acessibilidade"><Accessibility className="h-5 w-5" aria-hidden /><button className="rounded p-2 hover:bg-slate-100" onClick={toggleContrast} aria-pressed={highContrast} aria-label="Alternar alto contraste"><Contrast className="h-4 w-4" /></button><button className="rounded p-2 hover:bg-slate-100" onClick={() => setFontScale(fontScale === 1 ? 1.15 : 1)} aria-label="Ajustar tamanho do texto"><Type className="h-4 w-4" /></button><button className="rounded p-2 hover:bg-slate-100" onClick={toggleReducedMotion} aria-pressed={reducedMotion} aria-label="Reduzir animações"><Rabbit className="h-4 w-4" /></button></div>; }

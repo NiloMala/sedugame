@@ -1,0 +1,1 @@
+import { ResourcePage } from '@/components/resource-page'; export default function Page(){return <ResourcePage title="Escolas" description="Gerencie as escolas cadastradas." path="/api/admin/schools"/>}

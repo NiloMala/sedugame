@@ -1,0 +1,1 @@
+import { ResourcePage } from '@/components/resource-page'; export default function Page(){return <ResourcePage title="Questões" description="Revise questões antes da publicação." path="/api/admin/questions"/>}

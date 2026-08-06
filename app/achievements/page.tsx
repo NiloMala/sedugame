@@ -1,0 +1,4 @@
+'use client';
+import { useQuery } from '@tanstack/react-query'; import { AppShell } from '@/components/shell'; import { AchievementCard } from '@/components/gamification'; import { api } from '@/lib/api'; import type { Envelope } from '@/lib/types';
+type Achievement={id:number;title:string;icon?:string;unlocked?:boolean;unlocked_at?:string};
+export default function AchievementsPage(){const q=useQuery({queryKey:['achievements'],queryFn:()=>api<Envelope<Achievement[]>>('/api/achievements').then(r=>r.data)});return <AppShell><h1 className="text-3xl font-bold">Conquistas</h1><p className="mt-2 text-slate-600">Cada descoberta merece uma medalha.</p>{q.isLoading?<p className="mt-7">Carregando...</p>:q.error?<p role="alert" className="mt-7">{q.error.message}</p>:<div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{q.data?.map(a=><AchievementCard key={a.id} title={a.title} icon={a.icon} unlocked={Boolean(a.unlocked??a.unlocked_at)}/>)}</div>}</AppShell>}

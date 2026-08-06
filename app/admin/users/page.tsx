@@ -1,0 +1,1 @@
+import { ResourcePage } from '@/components/resource-page'; export default function Page(){return <ResourcePage title="Usuários" description="Gerencie os usuários da plataforma." path="/api/admin/users"/>}

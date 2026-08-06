@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --brand: 0 105 170; --ink: 0 63 107; --sand: 245 250 255; }
+ [data-contrast='high'] { --brand: 0 63 107; --ink: 0 0 0; --sand: 255 255 255; }
+* { box-sizing: border-box; }
+html { font-size: var(--font-scale, 100%); }
+body { background: rgb(var(--sand)); color: rgb(var(--ink)); }
+button, a, input, select, textarea { outline-offset: 3px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #f59e0b; }
+.card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
+.btn-primary { @apply btn bg-brand text-white hover:bg-teal-800; }
+.btn-secondary { @apply btn border border-slate-300 bg-white hover:bg-slate-50; }
+.login-map-grid { background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px); background-size: 56px 56px; mask-image: radial-gradient(ellipse at center, black, transparent 75%); }
+.game-card { @apply rounded-3xl border border-sky-100 bg-white shadow-sm; }
+.xp-fill, .xp-ring { transition: width 900ms cubic-bezier(.2,.8,.2,1), stroke-dashoffset 900ms cubic-bezier(.2,.8,.2,1); }
+.campaign-card { transition: transform 220ms ease, box-shadow 220ms ease; }.campaign-card:hover { transform: translateY(-6px); box-shadow: 0 20px 35px rgba(2, 78, 126, .15); }
+.achievement-unlocked { transition: transform 220ms ease, box-shadow 220ms ease; }.achievement-unlocked:hover { transform: translateY(-5px) rotate(-.5deg); box-shadow: 0 16px 30px rgba(245, 158, 11, .24); }
+.achievement-locked::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 10%, rgba(56,189,248,.18), transparent 35%); animation: mystery-pulse 2.8s ease-in-out infinite; }
+.passport-page { background: #f5e8bf; }.passport-noise { background-image: repeating-linear-gradient(0deg, rgba(83,67,25,.08) 0 1px, transparent 1px 5px), radial-gradient(rgba(108,77,25,.15) .7px, transparent .7px); background-size: auto, 7px 7px; mix-blend-mode: multiply; }.passport-stamp { display: inline-flex; align-items: center; gap: .45rem; max-width: 190px; border: 3px double #b42336; border-radius: .65rem; padding: .55rem .75rem; color: #9f1239; font-size: .72rem; font-weight: 900; letter-spacing: .08em; transform: rotate(-3deg); }.stamp-reveal { animation: stamp-in 500ms cubic-bezier(.18,.89,.32,1.28) both; }
+@keyframes mystery-pulse { 50% { opacity: .2; transform: scale(1.08); } } @keyframes stamp-in { from { opacity: 0; transform: scale(1.7) rotate(-14deg); } to { opacity: 1; transform: scale(1) rotate(-3deg); } }
+[data-motion='reduce'] *, [data-motion='reduce'] *::before, [data-motion='reduce'] *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+.confetti i { position: absolute; top: -8vh; width: 10px; height: 18px; border-radius: 3px; animation: confetti-fall 2.9s ease-in forwards; }.celebration-trophy { animation: trophy-pop 700ms cubic-bezier(.18,.89,.32,1.28) both; }.level-up-pop { animation: level-pop 650ms 200ms both; }.achievement-reveal { opacity: 0; animation: reveal-up 520ms cubic-bezier(.18,.89,.32,1.28) forwards; } @keyframes confetti-fall { to { transform: translate3d(7vw,112vh,0) rotate(720deg); } } @keyframes trophy-pop { from { transform: scale(.2) rotate(-25deg); opacity: 0; } to { transform: scale(1); opacity: 1; } } @keyframes level-pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } } @keyframes reveal-up { from { transform: translateY(16px) scale(.94); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }

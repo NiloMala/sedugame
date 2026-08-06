@@ -1,0 +1,1 @@
+import { ResourcePage } from '@/components/resource-page'; export default function Page(){return <ResourcePage title="Minhas turmas" description="Acompanhe o desempenho das turmas sob sua responsabilidade." path="/api/teacher/classes"/>}

@@ -1,0 +1,3 @@
+import Link from 'next/link'; import { AppShell } from '@/components/shell';
+const entries=[['/admin/schools','Escolas'],['/admin/users','Usuários'],['/admin/campaigns','Campanhas'],['/admin/missions','Missões'],['/admin/questions','Questões'],['/admin/skills','Habilidades'],['/admin/reports','Relatórios'],['/admin/settings','Configurações']];
+export default function Page(){return <AppShell><h1 className="text-3xl font-bold">Gestão</h1><p className="mt-2 text-slate-600">Administre os recursos da plataforma.</p><div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{entries.map(([href,label])=><Link className="card p-5 font-bold hover:border-brand" href={href} key={href}>{label}</Link>)}</div></AppShell>}

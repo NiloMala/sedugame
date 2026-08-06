@@ -1,0 +1,1 @@
+import { ResourcePage } from '@/components/resource-page'; export default function Page(){return <ResourcePage title="Relatórios da rede" description="Indicadores gerais da Secretaria." path="/api/reports/network"/>}

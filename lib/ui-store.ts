@@ -1,0 +1,4 @@
+'use client';
+import { create } from 'zustand';
+interface UiState { highContrast: boolean; fontScale: number; reducedMotion: boolean; toggleContrast: () => void; setFontScale: (value:number) => void; toggleReducedMotion: () => void }
+export const useUiStore = create<UiState>((set) => ({ highContrast: false, fontScale: 1, reducedMotion: false, toggleContrast: () => set((s) => { const next = !s.highContrast; document.documentElement.dataset.contrast = next ? 'high' : ''; return { highContrast: next }; }), setFontScale: (fontScale) => { document.documentElement.style.setProperty('--font-scale', `${fontScale * 100}%`); set({ fontScale }); }, toggleReducedMotion: () => set((s) => { const next = !s.reducedMotion; document.documentElement.dataset.motion = next ? 'reduce' : ''; return { reducedMotion: next }; }) }));

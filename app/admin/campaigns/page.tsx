@@ -1,0 +1,1 @@
+import { ResourcePage } from '@/components/resource-page'; export default function Page(){return <ResourcePage title="Campanhas" description="Revise e publique campanhas pedagógicas." path="/api/admin/campaigns"/>}
