@@ -16,6 +16,8 @@ sedugame/
 
 > **Nota (2026-08-06)**: o plano original previa o Next.js dentro de `frontend/`. Na prática o GPT gerou o projeto direto na raiz do repositório, e por simplicidade decidimos manter assim em vez de reorganizar — reduziria risco reescrever imports/config à toa. `backend/` continua isolado na sua própria pasta. Um `.gitignore` só na raiz cobre `backend/vendor`, `backend/.env`, `node_modules/`, `.next/`, etc.
 
+> **Nota (2026-08-06)**: domínio real definido — `educacaocaraguatatuba.com.br`, com o projeto publicado sob o subdomínio/pasta `bora` na VPS (`/home/educacaocaraguatatuba.com.br/domains/bora`). Isso substitui `SEUDOMINIO` nos exemplos abaixo. Ver também decisão de roteamento único-domínio logo adiante nesta seção.
+
 ## 2. Decisões que divergem do brief original
 
 O brief original recomenda Next.js + Laravel + PostgreSQL/PostGIS + Redis + Docker. A infraestrutura real é: VPS com **CyberPanel** (OpenLiteSpeed), banco **MySQL/MariaDB gerenciado** (phpMyAdmin), **Cloudflare** na frente (DNS proxied + SSL), acesso **SSH completo**, sem Redis provisionado. Além disso, o frontend será construído **em paralelo por outra IA (GPT)**, o que exige separação real entre back e front.
@@ -59,65 +61,73 @@ Tudo que não está nesta tabela segue o brief original sem alteração.
 
 ## 4. Arquitetura de infraestrutura
 
+> **Atualização (2026-08-06)**: em vez dos dois subdomínios (`app.*`/`api.*`) previstos originalmente, a decisão final foi **um único domínio com dois caminhos**: `bora.educacaocaraguatatuba.com.br`. O OpenLiteSpeed encaminha `/api/*` e `/sanctum/*` para o Laravel (via contexto PHP/LSAPI nativo, servindo `backend/public`) e tudo o mais para o Next.js (via proxy reverso para o processo PM2 em `127.0.0.1:3000`). Motivo: elimina CORS entre front e back (mesma origem), simplifica cookie de sessão do Sanctum (não precisa de `SESSION_DOMAIN` com ponto líder nem lista de domínios stateful) e usa só 1 registro DNS/certificado em vez de 2.
+
 ```
 Cloudflare (DNS proxied · SSL Full Strict)
    │
-   ├── app.SEUDOMINIO  ───────────► VPS:3000 (Next.js via PM2)
-   │                                    reverse proxy no OpenLiteSpeed
-   │
-   └── api.SEUDOMINIO  ───────────► VPS (Laravel · PHP 8.3-FPM/LSAPI via CyberPanel)
-                                          │
-                                          ├── MySQL/MariaDB (gerenciado, phpMyAdmin)
-                                          ├── Storage local (storage/app/public + symlink)
-                                          └── Cron: * * * * * php artisan schedule:run
+   └── bora.educacaocaraguatatuba.com.br ───► VPS (OpenLiteSpeed via CyberPanel)
+                                                  │
+                                                  ├── /api/* , /sanctum/* ──► Laravel (PHP 8.3 LSAPI, docroot backend/public)
+                                                  │                              │
+                                                  │                              ├── MySQL/MariaDB (gerenciado, phpMyAdmin)
+                                                  │                              ├── Storage local (storage/app/public + symlink)
+                                                  │                              └── Cron: * * * * * php artisan schedule:run
+                                                  │
+                                                  └── /* (resto) ──► proxy reverso ──► 127.0.0.1:3000 (Next.js via PM2)
 ```
 
-Como `app.*` e `api.*` compartilham o mesmo domínio raiz, a autenticação do Sanctum pode usar **cookies httpOnly** em vez de token em `localStorage` — mais seguro contra XSS e sem necessidade de gerenciar refresh token manualmente. Isso é uma decisão de segurança, não só de conveniência.
+Como front e back agora são a **mesma origem**, a autenticação do Sanctum usa cookies httpOnly com `SESSION_DOMAIN=null` (escopo automático pro host exato) — mais simples que o cenário multi-subdomínio, e ainda mais seguro contra XSS que token em `localStorage`. `config/cors.php` continua existindo (adicionado em 2026-08-06 — estava faltando e quebrava qualquer chamada cross-origin, inclusive em dev local) como defesa em profundidade, mas deixa de ser estritamente necessário em produção por conta da mesma origem.
 
 ## 5. Checklist de infraestrutura (execução manual sua, no CyberPanel/Cloudflare)
 
-1. CyberPanel → criar subdomínio `api.SEUDOMINIO` (site Laravel).
-2. CyberPanel → criar subdomínio `app.SEUDOMINIO` (site proxy para o Node).
-3. CyberPanel → emitir SSL (AutoSSL/Let's Encrypt) para os dois subdomínios.
-4. CyberPanel → definir PHP 8.3 como versão ativa do site `api.SEUDOMINIO`.
-5. Cloudflare → criar registros DNS (A ou CNAME) para `api` e `app`, com proxy **ativado** (nuvem laranja).
-6. Cloudflare → SSL/TLS → modo **Full (strict)** (exige certificado válido no CyberPanel, não self-signed — já resolvido pelo AutoSSL do passo 3).
-7. Criar banco MySQL + usuário dedicado via phpMyAdmin (não usar root; permissões só no banco do projeto).
-8. Instalar Node.js LTS + PM2 no VPS via SSH, se ainda não houver.
-9. No CyberPanel, configurar o vHost de `app.SEUDOMINIO` como **proxy reverso** para `localhost:3000` (OpenLiteSpeed → External App, ou via Rewrite Rules apontando pro processo Node).
+1. CyberPanel → criar o site `bora.educacaocaraguatatuba.com.br` (um domínio só, não dois).
+2. CyberPanel → emitir SSL (AutoSSL/Let's Encrypt) para esse domínio.
+3. CyberPanel → definir PHP 8.3 como versão ativa do site.
+4. Cloudflare → registro DNS (A ou CNAME) para `bora`, com proxy **ativado** (nuvem laranja).
+5. Cloudflare → SSL/TLS → modo **Full (strict)**.
+6. Criar banco MySQL + usuário dedicado via phpMyAdmin (não usar root; permissões só no banco do projeto).
+7. Instalar Node.js LTS + PM2 no VPS via SSH, se ainda não houver.
+8. Editar o `vhost.conf` do site (OpenLiteSpeed) pra ter: um contexto **Proxy** em `/` apontando pra `127.0.0.1:3000` (Next.js/PM2), e dois contextos **PHP** (LSAPI) em `/api` e `/sanctum` apontando pro docroot `backend/public` (Laravel já resolve o prefixo `/api` internamente — é o padrão do Laravel 11). Ver roteiro completo de deploy (comandos + trecho de `vhost.conf`) no histórico da conversa de 2026-08-06 com o Claude; vale colar aqui depois de validado em produção.
 
 A partir daqui (deploy do código em si) fico responsável quando o projeto estiver pronto para subir — deixo os comandos documentados abaixo para quando chegarmos lá.
 
-### Deploy do Laravel (referência para quando formos publicar)
+### Deploy do Laravel (referência)
 ```bash
-git clone <repo-backend> api && cd api
+cd /home/educacaocaraguatatuba.com.br/domains/bora
+git pull   # ou git clone na primeira vez
+cd backend
 composer install --no-dev --optimize-autoloader
-cp .env.example .env
+cp .env.example .env   # só na primeira vez — depois editar à mão, nunca sobrescrever
 php artisan key:generate
-php artisan migrate --seed
+php artisan migrate --force   # --seed só na primeira vez, e só os seeders de catálogo (ver nota abaixo)
 php artisan storage:link
 php artisan config:cache && php artisan route:cache
 ```
 `.env` relevante:
 ```
-APP_URL=https://api.SEUDOMINIO
-SANCTUM_STATEFUL_DOMAINS=app.SEUDOMINIO
-SESSION_DOMAIN=.SEUDOMINIO
+APP_URL=https://bora.educacaocaraguatatuba.com.br
+SANCTUM_STATEFUL_DOMAINS=bora.educacaocaraguatatuba.com.br
+SESSION_DOMAIN=null
+CORS_ALLOWED_ORIGINS=https://bora.educacaocaraguatatuba.com.br
 DB_CONNECTION=mysql
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 ```
+> Nota: `DatabaseSeeder` roda também `CaraguatatubaCampaignSeeder` (conteúdo de demonstração, ~8 questões — não é o conteúdo final do MVP, que ainda depende da Sprint 4). Rodar em produção só se quiser algo pra testar/mostrar antes do conteúdo real; senão, semear só os catálogos (`RoleSeeder`, `LevelSeeder`, `GradeSeeder`, `SubjectSeeder`, `SchoolYearSeeder`) via `--class=`.
+
 Cron (via CyberPanel → Cron Jobs, ou crontab direto):
 ```
-* * * * * php /caminho/api/artisan schedule:run >> /dev/null 2>&1
+* * * * * php /home/educacaocaraguatatuba.com.br/domains/bora/backend/artisan schedule:run >> /dev/null 2>&1
 ```
 
 ### Deploy do Next.js (referência)
 ```bash
-git clone <repo-frontend> app && cd app
+cd /home/educacaocaraguatatuba.com.br/domains/bora
 npm ci
-npm run build
-pm2 start npm --name app-frontend -- start
+echo "NEXT_PUBLIC_API_URL=https://bora.educacaocaraguatatuba.com.br" > .env.production
+npm run build   # NEXT_PUBLIC_* é embutido no bundle NO BUILD — precisa do .env.production antes desse passo
+pm2 start npm --name bora-frontend -- start -- -p 3000 -H 127.0.0.1
 pm2 save && pm2 startup
 ```
 
