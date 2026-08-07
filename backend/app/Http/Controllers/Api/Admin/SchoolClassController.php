@@ -14,7 +14,7 @@ class SchoolClassController extends Controller
 
     public function index(Request $request)
     {
-        $query = SchoolClass::with(['school', 'grade', 'schoolYear'])->orderBy('name');
+        $query = SchoolClass::with(['school', 'grade', 'schoolYear', 'teachers.user'])->orderBy('name');
         $this->scopeQueryToSchool($request, $query);
 
         if ($this->isNetworkAdmin($request->user()) && $request->filled('school_id')) {
@@ -28,7 +28,7 @@ class SchoolClassController extends Controller
     {
         $this->assertSchoolAccess($request, $class->school_id);
 
-        return ['data' => $class->load('school', 'grade', 'schoolYear')];
+        return ['data' => $class->load('school', 'grade', 'schoolYear', 'teachers.user')];
     }
 
     public function store(Request $request)

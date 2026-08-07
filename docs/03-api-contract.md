@@ -372,6 +372,8 @@ Todos os recursos abaixo seguem o **mesmo padrão REST**: `GET` (lista paginada 
 /api/admin/schools
 /api/admin/users               (body de criação inclui role; se role=student, exige registration_number + class_id — cria o Student junto)
 /api/admin/classes
+POST   /api/admin/classes/{id}/teachers            { teacher_id, subject_id } — vincula professor à turma nessa disciplina (idempotente)
+DELETE /api/admin/classes/{id}/teachers/{teacherId} ?subject_id= opcional — sem ele, remove todas as disciplinas desse professor nessa turma
 /api/admin/grades
 /api/admin/school-years
 /api/admin/subjects

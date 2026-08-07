@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\AchievementController as AdminAchievementController;
 use App\Http\Controllers\Api\Admin\CampaignController as AdminCampaignController;
+use App\Http\Controllers\Api\Admin\ClassTeacherController;
 use App\Http\Controllers\Api\Admin\CollectibleItemController as AdminCollectibleItemController;
 use App\Http\Controllers\Api\Admin\GradeController;
 use App\Http\Controllers\Api\Admin\LevelController as AdminLevelController;
@@ -91,6 +92,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::apiResource('schools', SchoolController::class);
         Route::apiResource('classes', SchoolClassController::class)->parameters(['classes' => 'class']);
+        Route::post('/classes/{class}/teachers', [ClassTeacherController::class, 'store']);
+        Route::delete('/classes/{class}/teachers/{teacher}', [ClassTeacherController::class, 'destroy']);
         Route::apiResource('grades', GradeController::class);
         Route::apiResource('school-years', SchoolYearController::class);
         Route::apiResource('subjects', SubjectController::class);
