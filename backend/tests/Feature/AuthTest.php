@@ -99,6 +99,21 @@ class AuthTest extends TestCase
         $this->getJson('/api/me')->assertUnauthorized();
     }
 
+    /**
+     * Regressão (2026-08-07): uma requisição sem header Accept: application/json
+     * (qualquer curl cru, bot, monitor de uptime — o frontend real sempre manda
+     * esse header) contra rota protegida sem sessão derrubava a API inteira com
+     * 500 (RouteNotFoundException: Route [login] not defined), porque este app
+     * é 100% API e nunca teve tela de login web. Ver bootstrap/app.php.
+     */
+    public function test_unauthenticated_request_without_json_accept_header_still_gets_json_401(): void
+    {
+        $response = $this->get('/api/me');
+
+        $response->assertUnauthorized();
+        $response->assertJsonPath('message', 'Não autenticado.');
+    }
+
     public function test_me_returns_role_and_school(): void
     {
         $school = School::create([
