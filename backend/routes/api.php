@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AchievementController as AdminAchievementController;
 use App\Http\Controllers\Api\Admin\CampaignController as AdminCampaignController;
+use App\Http\Controllers\Api\Admin\CollectibleItemController as AdminCollectibleItemController;
 use App\Http\Controllers\Api\Admin\GradeController;
+use App\Http\Controllers\Api\Admin\LevelController as AdminLevelController;
 use App\Http\Controllers\Api\Admin\LocationController;
 use App\Http\Controllers\Api\Admin\MediaController;
 use App\Http\Controllers\Api\Admin\MissionController as AdminMissionController;
@@ -107,6 +110,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::apiResource('questions', AdminQuestionController::class);
         Route::post('/questions/{question}/review', [AdminQuestionController::class, 'review']);
+
+        Route::apiResource('achievements', AdminAchievementController::class);
+        Route::apiResource('levels', AdminLevelController::class);
+        Route::apiResource('collectible-items', AdminCollectibleItemController::class)
+            ->parameters(['collectible-items' => 'item']);
 
         Route::get('/settings', [SettingsController::class, 'show']);
         Route::put('/settings', [SettingsController::class, 'update']);

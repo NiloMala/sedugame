@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Level extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = ['name', 'minimum_experience', 'maximum_experience', 'icon', 'order'];
 
     /**

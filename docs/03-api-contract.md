@@ -383,12 +383,18 @@ Todos os recursos abaixo seguem o **mesmo padrão REST**: `GET` (lista paginada 
                                   (options[], hints[], location{} podem vir aninhados no mesmo body de create/update — ver shape abaixo)
 /api/admin/locations
 /api/admin/media
+/api/admin/achievements        (cadastro de rede — escrita só department_admin/super_admin, como subjects/skills; rule_type é fechado, ver lista abaixo)
+/api/admin/levels              (idem; sem paginação — GET retorna a lista inteira ordenada por `order`)
+/api/admin/collectible-items   (idem; GET aceita ?category=&status=)
 GET  /api/admin/settings         -> configurações da rede: nome da plataforma, cores do tema, regras de pontuação/faixas de distância
 PUT  /api/admin/settings
 POST /api/admin/students/{id}/reset-password   (role: school_admin | department_admin — ver seção Autenticação)
 ```
 
-> `achievements` e `levels` ainda não têm CRUD admin implementado — por ora são só seed (`database/seeders/LevelSeeder.php`, `CaraguatatubaCampaignSeeder.php`). Endpoints ficam pra quando a Secretaria precisar configurar isso pelo painel em vez de direto no banco.
+`rule_type` aceito em `achievements` (validado contra essa lista fechada — os valores espelham `ProgressionService::achievementSatisfied()`; um valor fora daqui salvaria mas nunca desbloquearia):
+`first_mission_completed`, `missions_completed_count` (`rule_value.count`), `correct_answers_count` (`rule_value.count`), `mission_without_hints`, `streak_days` (`rule_value.days`), `campaign_completed` (`rule_value.campaign_id`).
+
+Exclusão de `achievements`/`levels`/`collectible-items` é soft delete (2026-08-07 — antes só `collectible_items` tinha `deleted_at`; `achievements`/`levels` ganharam na mesma migration que trouxe o CRUD admin, pelo mesmo motivo do brief seção 48: histórico de conquista/colecionável já desbloqueado por aluno não pode ser apagado em cascata por um hard delete no catálogo).
 
 Shape de `POST/PUT /api/admin/questions` (options/hints/location aninhados):
 ```json
