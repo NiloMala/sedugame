@@ -45,7 +45,9 @@ class DatabaseSeeder extends Seeder
         }
 
         // Conteúdo de demonstração (não é o volume final de produção — ver
-        // comentário no topo do próprio seeder).
+        // comentário no topo de cada seeder). 3 campanhas ao todo, pra dar
+        // volume de apresentação sem inventar fato específico arriscado.
         $this->call(CaraguatatubaCampaignSeeder::class);
+        $this->call(DemoCampaignsExpansionSeeder::class);
     }
 }
