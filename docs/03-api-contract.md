@@ -328,7 +328,7 @@ GET  /api/teacher/reports/class/{classId}
 GET  /api/teacher/reports/class/{classId}/export?format=pdf|xlsx|csv
 ```
 
-> **Implementado até aqui**: `format=csv` funciona (streaming nativo do Laravel, sem dependência extra). `pdf`/`xlsx` respondem `422` por enquanto — exigem escolher e instalar uma lib (`barryvdh/laravel-dompdf`, `maatwebsite/excel`), fica pra quando um desses formatos for realmente pedido por um usuário real, não antes.
+Os 3 formatos usam exatamente as mesmas linhas (`ReportController::classReportRows()`), então nunca divergem entre si. `pdf` via `barryvdh/laravel-dompdf` (`resources/views/reports/class-export.blade.php`, A4 paisagem); `xlsx` via `maatwebsite/excel` (`app/Exports/ClassReportExport.php`). Formato fora de `csv|pdf|xlsx` devolve `422`.
 
 Todas as rotas de professor exigem que a turma pertença a ele (`teacher_classes`) — tentar acessar turma/atividade de outro professor devolve `403`.
 

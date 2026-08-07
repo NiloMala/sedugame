@@ -139,6 +139,35 @@ class TeacherAndReportsTest extends TestCase
         $this->assertStringContainsString('TR-777', $response->streamedContent());
     }
 
+    public function test_teacher_can_export_class_report_as_pdf(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get("/api/teacher/reports/class/{$this->class->id}/export?format=pdf");
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
+        // %PDF- é o magic number de todo arquivo PDF válido — confirma que o
+        // dompdf realmente renderizou algo, não só devolveu o content-type certo.
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_teacher_can_export_class_report_as_xlsx(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get("/api/teacher/reports/class/{$this->class->id}/export?format=xlsx");
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'spreadsheetml',
+            $response->headers->get('Content-Type')
+        );
+    }
+
+    public function test_class_export_rejects_unknown_format(): void
+    {
+        $response = $this->actingAs($this->teacherUser)->get("/api/teacher/reports/class/{$this->class->id}/export?format=doc");
+
+        $response->assertStatus(422);
+    }
+
     public function test_school_admin_sees_own_school_report(): void
     {
         $admin = User::factory()->create(['role_id' => Role::where('slug', 'school_admin')->value('id'), 'school_id' => $this->school->id]);
