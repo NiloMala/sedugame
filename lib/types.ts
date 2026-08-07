@@ -2,7 +2,7 @@ export type Role = 'student' | 'teacher' | 'coordinator' | 'director' | 'school_
 export interface Envelope<T> { data: T; meta?: PaginationMeta; links?: PaginationLinks }
 export interface PaginationMeta { current_page: number; last_page: number; per_page: number; total: number }
 export interface PaginationLinks { first: string; last: string; prev: string | null; next: string | null }
-export interface User { id: number; name: string; email: string; role: Role; avatar_url: string | null; school: { id: number; name: string }; student?: { id: number; class: { id: number; name: string }; level: { id: number; name: string; order: number }; experience: number; experience_to_next_level: number } }
+export interface User { id: number; name: string; email: string; role: Role; avatar_url: string | null; school: { id: number; name: string }; student?: { id: number; class: { id: number; name: string }; level: { id: number; name: string; order: number }; experience: number; experience_to_next_level: number; streak_days?: number; avatar_base?: string } }
 export interface Campaign { id: number; title: string; slug: string; cover_image_url: string | null; primary_subject: { id: number; name: string; color: string }; grade: { id: number; name: string }; difficulty: 'easy'|'medium'|'hard'; missions_count: number; estimated_minutes: number; progress: { percent: number; status: 'in_progress'|'completed'|'available' } }
 export interface CampaignDetail extends Campaign { missions: { id: number; title: string; order: number; status: string; locked: boolean }[] }
 export interface Mission { id: number; campaign_id: number; title: string; narrative: string; difficulty: string; max_score: number; stages: Stage[] }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Compass, LogOut, Map, Shield, Trophy, Users } from 'lucide-react';
+import { BookOpen, Compass, Gem, LogOut, Map, Shield, Trophy, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { api } from '@/lib/api';
@@ -11,7 +11,7 @@ import { AccessibilityControls } from './accessibility';
 
 const studentLinks = [
   { href: '/dashboard', label: 'Início', icon: Compass }, { href: '/campaigns', label: 'Campanhas', icon: Map },
-  { href: '/activities', label: 'Atividades', icon: BookOpen }, { href: '/passport', label: 'Passaporte', icon: Users }, { href: '/achievements', label: 'Conquistas', icon: Trophy },
+  { href: '/activities', label: 'Atividades', icon: BookOpen }, { href: '/passport', label: 'Passaporte', icon: Users }, { href: '/achievements', label: 'Conquistas', icon: Trophy }, { href: '/collections', label: 'Coleção', icon: Gem },
 ];
 const teacherLinks = [
   { href: '/dashboard', label: 'Início', icon: Compass }, { href: '/teacher/classes', label: 'Turmas', icon: Users },
